@@ -15,20 +15,19 @@ const rect = (x, y, width, height, color) => {
 };
 
 function line(points, color, width = 1) {
+  if (!points || points.length < 2) return;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'square';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(Math.round(points[0][0]), Math.round(points[0][1]));
   for (let index = 1; index < points.length; index++) {
-    let x = Math.round(points[index - 1][0]), y = Math.round(points[index - 1][1]);
-    const endX = Math.round(points[index][0]), endY = Math.round(points[index][1]);
-    const dx = Math.abs(endX - x), dy = -Math.abs(endY - y);
-    const stepX = x < endX ? 1 : -1, stepY = y < endY ? 1 : -1;
-    let error = dx + dy;
-    for (;;) {
-      rect(x - Math.floor(width / 2), y - Math.floor(width / 2), width, width, color);
-      if (x === endX && y === endY) break;
-      const doubled = error * 2;
-      if (doubled >= dy) { error += dy; x += stepX; }
-      if (doubled <= dx) { error += dx; y += stepY; }
-    }
+    ctx.lineTo(Math.round(points[index][0]), Math.round(points[index][1]));
   }
+  ctx.stroke();
+  ctx.restore();
 }
 
 function text(value, x, y, color = '#f6e7ba', size = 8) {
@@ -148,10 +147,10 @@ function background(dark) {
     groundCol = '#2a0a14'; lineCol = '#70192e';
   }
 
-  // Sky gradients
+  // Full screen sky gradients - seamless coverage with ZERO gaps from 0 to 282
   rect(0, 0, 640, 80, skyTop);
-  rect(0, 80, 640, 55, skyMid);
-  rect(0, 135, 640, 70, skyLow);
+  rect(0, 80, 640, 60, skyMid);
+  rect(0, 140, 640, 142, skyLow); // 140 + 142 = 282 (meets the curb perfectly)
 
   // Distant Moon / Rift Core
   const moonX = 488 - game.camera * 0.06;
@@ -159,18 +158,18 @@ function background(dark) {
   rect(moonX, 36, 31, 31, moonCol);
   rect(moonX - 5, 42, 41, 19, moonCol);
 
-  // Distant Shadowed Silhouette Buildings (Background skyline only!)
+  // Distant Shadowed Silhouette Buildings (Background skyline, seated flush on curb line 282)
   for (let index = 0; index < 28; index++) {
     const x = index * 68 - Math.round(game.camera * 0.28) % 68 - 60;
     const h = 80 + (index % 5) * 14;
-    rect(x, 260 - h, 54, h, shadowCol1);
-    rect(x + 6, 252 - h, 38, 10, shadowCol2);
+    rect(x, 282 - h, 54, h, shadowCol1);
+    rect(x + 6, 274 - h, 38, 10, shadowCol2);
     // Rooftop antenna / pipes
-    if (index % 3 === 0) rect(x + 24, 238 - h, 3, 14, shadowCol1);
+    if (index % 3 === 0) rect(x + 24, 260 - h, 3, 14, shadowCol1);
     // Industrial water tank silhouette
     if (index % 4 === 1) {
-      rect(x + 12, 236 - h, 24, 16, shadowCol1);
-      rect(x + 16, 252 - h, 16, 4, shadowCol2);
+      rect(x + 12, 258 - h, 24, 16, shadowCol1);
+      rect(x + 16, 274 - h, 16, 4, shadowCol2);
     }
   }
 
@@ -179,16 +178,23 @@ function background(dark) {
     const x = index * 150 - game.camera;
     if (x > -180 && x < 700) {
       tree(x + 132, 282, dark, index);
-      // Telephone poles and high voltage cables
+      // Telephone poles and high voltage crossbars
       rect(x + 20, 134, 3, 150, dark ? '#344754' : '#697778');
       rect(x + 14, 130, 15, 6, dark ? '#26353f' : '#697778');
     }
   }
 
-  // Telephone lines
-  line([[-10, 132], [200, 145], [420, 136], [650, 146]], lineCol);
+  // Realistic dynamic utility cables that hang between poles and scroll with camera
+  const startPylon = Math.floor((game.camera - 100) / 150);
+  const endPylon = Math.ceil((game.camera + 700) / 150);
+  for (let i = startPylon; i <= endPylon; i++) {
+    const p1x = i * 150 - game.camera + 21;
+    const p2x = (i + 1) * 150 - game.camera + 21;
+    const midX = (p1x + p2x) / 2;
+    line([[p1x, 133], [midX, 142], [p2x, 133]], lineCol, 1);
+  }
 
-  // Road surface
+  // Road surface - seamlessly covers 282 to 360
   rect(0, 282, 640, 12, dark ? (lvl === 3 ? '#3b121c' : lvl === 2 ? '#2e1c3b' : '#33434f') : '#d7c6a7');
   rect(0, 294, 640, 6, dark ? '#1b252f' : '#8e9e95');
   rect(0, 300, 640, 60, groundCol);
@@ -241,6 +247,77 @@ function monster(x, y, scale = 1) {
   ctx.restore();
 }
 
+function drawInfectedWall(camera, state) {
+  const wallX = 1065 - camera;
+  if (wallX < -100 || wallX > 740) return;
+
+  const pulse = Math.sin(game.time * 5) * 3;
+
+  // 1. Concrete & Brick Barricade Wall Structure
+  rect(wallX - 6, 120, 48, 182, '#181b24');
+  rect(wallX, 125, 36, 177, '#252a36');
+
+  // Weathered hazard warning bands at the top
+  for (let s = 0; s < 4; s++) {
+    rect(wallX + s * 9, 125, 5, 14, s % 2 === 0 ? '#b8860b' : '#11141a');
+  }
+
+  // Brick horizontal mortar lines
+  for (let row = 0; row < 11; row++) {
+    rect(wallX, 142 + row * 14, 36, 1, '#181c24');
+  }
+
+  // 2. The Ruptured Hole (Stranger Things "The Gate")
+  // Inner dark swirling abyss
+  rect(wallX - 3, 205, 42, 95, '#120206');
+  rect(wallX + 1, 212, 34, 88, '#24030b');
+  rect(wallX + 5, 220, 26, 78, '#420614');
+
+  // Pulsing rift portal glow
+  const coreAlpha = 0.55 + Math.sin(game.time * 6) * 0.25;
+  ctx.globalAlpha = coreAlpha;
+  rect(wallX + 8, 228, 20, 68, '#881337');
+  rect(wallX + 12, 238, 12, 50, '#e11d48');
+  ctx.globalAlpha = 1.0;
+
+  // 3. Stranger Things Creeping Vines & Fleshy Tendrils
+  const vineDark = '#4c0519';
+  const vineMid = '#881337';
+  const vineBright = '#e11d48';
+
+  // Leftward creeping vines stretching out across the road towards the player!
+  line([[wallX + 8, 285], [wallX - 18, 292], [wallX - 45, 298], [wallX - 90, 301]], vineDark, 4);
+  line([[wallX - 18, 292], [wallX - 38, 286], [wallX - 65, 288]], vineMid, 2);
+  line([[wallX + 10, 275], [wallX - 14, 278], [wallX - 35, 283], [wallX - 70, 295]], vineMid, 3);
+  line([[wallX - 35, 283], [wallX - 55, 280], [wallX - 95, 291]], vineBright, 2);
+  line([[wallX + 12, 296], [wallX - 25, 300], [wallX - 60, 302]], vineDark, 3);
+
+  // Upward climbing vines wrapping the wall
+  line([[wallX + 6, 215], [wallX - 8, 190], [wallX + 4, 165], [wallX - 6, 138]], vineDark, 4);
+  line([[wallX - 8, 190], [wallX + 18, 175], [wallX + 14, 148]], vineMid, 2);
+  line([[wallX + 30, 212], [wallX + 42, 185], [wallX + 34, 160], [wallX + 45, 130]], vineDark, 3);
+  line([[wallX + 42, 185], [wallX + 24, 168]], vineMid, 2);
+
+  // Jagged organic perimeter of the hole
+  line([[wallX - 4, 208], [wallX + 18, 202 + pulse], [wallX + 40, 210]], vineBright, 3);
+  line([[wallX - 4, 208], [wallX - 6, 252], [wallX - 3, 298]], vineMid, 3);
+  line([[wallX + 40, 210], [wallX + 42, 252], [wallX + 38, 298]], vineMid, 3);
+
+  // Spores & pulsing organic nodes
+  for (let n = 0; n < 8; n++) {
+    const nx = wallX - 22 + (n * 13) % 52;
+    const ny = 215 + (n * 17) % 80;
+    rect(nx, ny, 3 + (n % 2), 3 + (n % 2), n % 2 === 0 ? '#f43f5e' : '#991b1b');
+  }
+
+  // Floating crimson spore dust around the breach
+  for (let s = 0; s < 10; s++) {
+    const sx = wallX - 40 + ((s * 23 + game.time * 20) % 95);
+    const sy = 205 + ((s * 19 + game.time * 12) % 90);
+    rect(sx, sy, 1, 1, '#fecdd3');
+  }
+}
+
 function cyclist(index, x, y) {
   bike(x, y, index === 0 ? colors[3] : colors[index - 1], false, game.cycleTime * 18);
 }
@@ -250,6 +327,8 @@ function emptyBike(index, x, y, tilt) {
 }
 
 function render() {
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, 640, 360);
   const state = game.state, dark = ['dark', 'dead', 'win'].includes(state), camera = Math.round(game.camera);
   const lvl = game.level || 1;
   const cfg = game.currentConfig();
@@ -339,14 +418,8 @@ function render() {
       ctx.globalAlpha = 1;
     }
   } else {
-    // Opening ride phase
-    if (['approach', 'fall', 'blackout'].includes(state)) {
-      const growth = Math.max(0, Math.min(1, (game.x - 900) / 140));
-      if (growth > 0) {
-        line([[1040 - camera, 303], [1075 - camera, 297], [1095 - camera, 310], [1140 - camera, 299], [1180 - camera, 306]], '#c36b68', 2);
-        vines(1060 - camera, Math.max(1, Math.round(135 * growth)));
-      }
-    }
+    // Opening ride phase: Stranger Things Infected Wall with Ruptured Breach
+    drawInfectedWall(camera, state);
     if (scene.monster) {
       ctx.globalAlpha = scene.monster;
       monster(game.abductionX + 190 - camera, 290, 1.75);

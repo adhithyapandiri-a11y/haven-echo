@@ -237,6 +237,14 @@ func _draw() -> void:
 			Vector2(tx, 520 - th), Vector2(tx - 40, 530), Vector2(tx + 40, 530)
 		]), Color(0.06, 0.10, 0.16))
 		
+	# Corrupted Barrier Wall with Stranger Things Rift Breach
+	draw_rect(Rect2(290, 360, 24, 160), Color("#1e2430"))
+	draw_rect(Rect2(288, 430, 28, 88), Color("#120206"))
+	draw_rect(Rect2(292, 440, 20, 68), Color("#881337"))
+	draw_line(Vector2(292, 480), Vector2(230, 505), Color("#881337"), 4)
+	draw_line(Vector2(230, 505), Vector2(170, 510), Color("#e11d48"), 2)
+	draw_line(Vector2(295, 435), Vector2(280, 380), Color("#881337"), 3)
+
 	# 4. Platforms & Roadway
 	draw_rect(Rect2(0, 520, 300, 130), cfg.ground)
 	draw_rect(Rect2(0, 520, 300, 8), Color("334155"))
@@ -284,16 +292,9 @@ func _draw() -> void:
 	draw_string(default_font, Vector2(780, 36), "ECHOES: %d / 3" % echo_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, theme_col)
 	draw_string(default_font, Vector2(980, 36), "DEATHS: %02d" % deaths, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#f8fafc"))
 	
-	# Radio transmission box
+	# Top subtitles without box (Pure white text per user request)
 	if radio_timer > 0.0 and state == "playing":
-		var bx := 236.0
-		var by := 92.0
-		var bw := 680.0
-		var bh := 64.0
-		draw_rect(Rect2(bx, by, bw, bh), Color(0.05, 0.09, 0.18, 0.95))
-		draw_rect(Rect2(bx, by, bw, bh), theme_col, false, 2)
-		draw_string(default_font, Vector2(bx + 18, by + 24), "📻 " + radio_speaker, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, theme_col)
-		draw_string(default_font, Vector2(bx + 18, by + 48), radio_message, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#f8fafc"))
+		_draw_centered(radio_message, 45, 17, Color("#ffffff"))
 
 	# Flash effect
 	if flash_timer > 0.0:
