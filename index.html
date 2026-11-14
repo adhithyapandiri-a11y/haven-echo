@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111c26">
+  <meta name="description" content="Four friends. One last ride. A pixel-art adventure through two versions of the same town.">
+  <title>ECHOES: The Last Ride</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header><a href="./" class="wordmark">ECHOES<span>THE LAST RIDE</span></a><span class="edition">A SMALL TOWN. A LONG WAY HOME.</span><button id="sound" aria-pressed="false">SOUND OFF</button></header>
+    <section class="cabinet" aria-label="ECHOES browser game">
+      <div class="topline"><span id="chapter">01 / THE LAST GOOD EVENING</span><span id="counter">FOUR FRIENDS · ONE ROAD</span></div>
+      <div class="viewport">
+        <canvas id="game" width="640" height="360" tabindex="0" aria-label="Side-scrolling adventure. Use D or right arrow to ride. In the dark world use A and D to move, Space to jump, R to leave an Echo, Escape to pause."></canvas>
+        <div id="menu" class="overlay"><div class="intro"><span class="eyebrow">AN OCTOBER EVENING, 1986</span><h1>ECHOES</h1><p class="subtitle">THE LAST RIDE</p><p class="story">You were all supposed to make it home.</p><button id="start" class="primary">START THE RIDE <span>↗</span></button><p class="notice">Contains red light effects. Gentle effects are on by default.</p></div></div>
+        <div id="pause-menu" class="overlay hidden"><div class="panel"><h2>Take a breath.</h2><p>The town can wait.</p><button id="resume" class="primary">KEEP GOING</button><button id="restart">RESTART THE STORY</button></div></div>
+        <div id="win-menu" class="overlay hidden"><div class="panel"><span class="eyebrow">LEVEL 01 COMPLETE</span><h2>Never ride alone.</h2><p>You found your friends. Every fall left a way back.</p><p id="result"></p><button id="replay" class="primary">RIDE AGAIN</button></div></div>
+        <div id="dialogue" class="dialogue hidden" role="status"></div>
+      </div>
+      <div class="bottomline"><span id="objective">HOLD <kbd>D</kbd> / <kbd>→</kbd> TO RIDE TOGETHER</span><button id="pause">PAUSE <kbd>ESC</kbd></button></div>
+    </section>
+    <footer><span><span class="dot"></span> BOUNCE BACK — EVERY FALL LEAVES AN ECHO</span><label><input id="gentle" type="checkbox" checked> Gentle effects</label><span><kbd>A</kbd><kbd>D</kbd> MOVE <kbd>SPACE</kbd> JUMP <kbd>R</kbd> ECHO</span></footer>
+    <div class="touch" aria-label="Touch controls"><button data-key="ArrowLeft" aria-label="Move left">←</button><button data-key="ArrowRight" aria-label="Move right">→</button><button data-key="KeyR">ECHO</button><button data-key="Space">JUMP</button></div>
+  </main>
+  <script src="engine.js"></script><script src="game.js"></script>
+</body>
+</html>
