@@ -1,0 +1,13 @@
+{
+  "source": "Animate_pixel_art_town_clean.mp4",
+  "sample_seconds": [
+    0,
+    5.8
+  ],
+  "pan_offset": 995,
+  "size": [
+    1593,
+    360
+  ],
+  "usage": "User-supplied town scenery; extracted panorama with nearest-neighbor scaling. Original video is not bundled."
+}

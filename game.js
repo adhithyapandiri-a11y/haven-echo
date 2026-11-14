@@ -3,8 +3,22 @@ const canvas=document.getElementById('game'), ctx=canvas.getContext('2d',{alpha:
 ctx.imageSmoothingEnabled=false;
 const game=new EchoGame(), keys=new Set(), pressed=new Set();
 const ui=Object.fromEntries(['menu','pause-menu','win-menu','dialogue','chapter','counter','objective','result','gentle','sound'].map(id=>[id,document.getElementById(id)]));
-const colors=['#e8b758','#e77c65','#8cadce','#d9cf9b'];
+const colors=['#8671b6','#439264','#c4a047','#c99a8b'];
+const sprites={riders:new Image(),shadow:new Image(),bikes:new Image()};
+sprites.riders.src='assets/riders.png';sprites.shadow.src='assets/shadow.png';sprites.bikes.src='assets/empty-bikes.png';
 let soundOn=false,audioContext,lastTime=0,lastState='',audioBeat=0;
+const townArt=new Image();
+let darkTownArt=null;
+townArt.onload=()=>{
+  darkTownArt=document.createElement('canvas');
+  darkTownArt.width=townArt.width;darkTownArt.height=townArt.height;
+  const painter=darkTownArt.getContext('2d');
+  painter.filter='grayscale(0.7) brightness(0.48)';
+  painter.drawImage(townArt,0,0);
+  painter.filter='none';painter.globalCompositeOperation='source-atop';
+  painter.fillStyle='#18344466';painter.fillRect(0,0,townArt.width,townArt.height);
+};
+townArt.src='assets/town-sunset.png';
 const rect=(x,y,width,height,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),width,height);};
 function line(points,color,width=1) {
   for(let index=1;index<points.length;index++) {
@@ -28,6 +42,7 @@ function bike(x,y,color,fallen=false,pedal=0) {
 function rider(x,y,color,phase=0,cycling=false) {
   const leg=Math.round(Math.sin(phase)*3);
   rect(x-5,y-24,10,3,'#263348');rect(x-6,y-21,11,7,'#263348');rect(x-3,y-20,8,8,'#eec39b');rect(x+4,y-18,2,4,'#eec39b');rect(x+3,y-19,1,1,'#293242');rect(x-5,y-12,10,12,color);rect(x-6,y-10,3,8,color);rect(x+3,y-10,3,8,color);
+  if(color===colors[3]){for(let stripe=0;stripe<3;stripe++)rect(x-5,y-11+stripe*4,9,2,'#f0dcc0');rect(x-8,y-11,3,10,'#783641');}
   if(cycling){line([[x-2,y],[x+4,y+3+leg],[x-1,y+10+leg]],'#39455b',3);line([[x+3,y-8],[x+9,y-3],[x+12,y-4]],'#eec39b',2);}else{rect(x-4,y,3,10+leg,'#6d7f99');rect(x+1,y,3,10-leg,'#53667e');rect(x-5,y+9+leg,5,3,'#e4d0a4');rect(x+1,y+9-leg,5,3,'#e4d0a4');}
 }
 function tree(x,y,dark,variant) {
@@ -51,6 +66,26 @@ function building(x,index,dark) {
   if(dark) {line([[x+5,283],[x+18,257],[x+12,231],[x+30,214],[x+26,top+3]],'#713d4b',3);line([[x+18,257],[x+39,247],[x+48,224]],'#a35057',2);}
 }
 function background(dark) {
+  if(townArt.complete&&townArt.naturalWidth&&(!dark||darkTownArt)) {
+    const art=dark?darkTownArt:townArt,width=townArt.naturalWidth;
+    const offset=Math.round(game.camera)%width;
+    ctx.drawImage(art,-offset,0);
+    if(width-offset<640)ctx.drawImage(art,width-offset,0);
+    if(dark){
+      for(let index=0;index<30;index++){
+        const x=index*127-Math.round(game.camera);
+        if(x < -40 || x > 680)continue;
+        line([[x,289],[x+12,267],[x+3,247],[x+20,224],[x+16,196]],'#793b4c',3);
+        line([[x+12,267],[x+30,255],[x+36,234]],'#ac5261',2);
+        rect(x+19,223,3,3,'#df8b82');
+      }
+      for(let index=0;index<40;index++){
+        const x=((index*79-game.camera*.7+Math.sin(game.time*.3+index)*12)%660+660)%660;
+        rect(x,(index*37+game.time*(3+index%4))%360,1+index%2,1,'#9c7c76');
+      }
+    }
+    return;
+  }
   rect(0,0,640,360,dark?'#152635':'#a6c6bd');
   rect(0,80,640,55,dark?'#26313d':'#c3d1b5');rect(0,135,640,70,dark?'#35404a':'#e4d4a9');
   rect(488-game.camera*.06,36,31,31,dark?'#9e6b6b':'#f5e3ad');rect(483-game.camera*.06,42,41,19,dark?'#9e6b6b':'#f5e3ad');
@@ -74,9 +109,24 @@ function monster(x,y,scale=1) {
   const black='#131b29';rect(-13,-63,26,38,black);rect(-9,-79,19,20,black);rect(-17,-83,7,9,black);rect(9,-90,5,22,black);
   line([[-10,-54],[-29,-41],[-37,-8]],black,7);line([[12,-56],[28,-37],[38,-22],[32,-8]],black,6);line([[-7,-27],[-13,-5],[-24,0]],black,8);line([[7,-27],[12,-9],[20,0]],black,8);rect(-4,-71,3,2,'#d99782');rect(4,-71,3,2,'#d99782');ctx.restore();
 }
+function cyclist(index,x,y) {
+  if(sprites.riders.complete&&sprites.riders.naturalWidth){
+    const frame=Math.floor(game.cycleTime*8)%48;
+    ctx.drawImage(sprites.riders,frame*54,index*72,54,72,Math.round(x)-27,Math.round(y)-72,54,72);
+  }else bike(x,y,index===0?colors[3]:colors[index-1],false,game.cycleTime*18);
+}
+function emptyBike(index,x,y,tilt) {
+  if(!sprites.bikes.complete||!sprites.bikes.naturalWidth){bike(x,y,colors[index-1],Math.max(.001,tilt));return;}
+  ctx.save();ctx.translate(Math.round(x),Math.round(y));
+  const height=Math.round(38*(1-tilt*.78));
+  ctx.drawImage(sprites.bikes,index*54,0,54,38,-27+Math.round(tilt*7),-height,54,height);
+  ctx.restore();
+}
 function render() {
   const state=game.state,dark=['dark','dead','win'].includes(state),camera=Math.round(game.camera);
   background(dark);
+  const scene=game.openingVisuals();
+  if(!dark&&game.disturbed){ctx.globalAlpha=.52;rect(0,0,640,360,'#310916');ctx.globalAlpha=.22;rect(0,0,640,360,'#b12d40');ctx.globalAlpha=1;}
   if(dark) {
     vines(1600-camera,480);
     for(let index=0;index<3;index++){const anchor=EchoGame.anchors[index],active=index<game.echoes,x=anchor.x-camera;
@@ -93,11 +143,20 @@ function render() {
     else {for(let index=0;index<16;index++)rect(game.x-camera+Math.sin(index*2)*game.phaseTime*60,game.y-15+Math.cos(index*2)*game.phaseTime*50,3,3,'#b3ddd1');}
     if(game.phaseTime<1.4&&state==='dark'){ctx.globalAlpha=Math.max(0,.6-game.phaseTime*.5);rect(0,0,640,360,'#000');ctx.globalAlpha=1;}
   } else {
-    if(['approach','fall','blackout'].includes(state))vines(1060-camera,135);
-    if(['title','ride','reveal'].includes(state))for(let index=3;index>=1;index--)bike(game.x+index*49-camera,300,colors[index-1],false,game.rideTime*18+index);
-    if(['vanish','thought','approach','fall'].includes(state))for(let index=1;index<4;index++)bike(140+95*game.rideTime+index*49-camera,300,colors[index-1],state==='vanish'?Math.max(.001,Math.min(1,game.phaseTime/.5)):1);
-    if(state!=='blackout')bike(game.x-camera,game.y,colors[3],false,game.rideTime*18+game.x*.12);
-    if(state==='reveal'||state==='vanish'){monster(game.x+240-camera,300,1.75);const alpha=ui.gentle.checked?.13:(.12+.22*Math.pow(Math.sin(game.phaseTime*5),6));ctx.globalAlpha=alpha;rect(0,0,640,360,'#ce3444');ctx.globalAlpha=1;}
+    if(['approach','fall','blackout'].includes(state)){
+      const growth=Math.max(0,Math.min(1,(game.x-900)/140));
+      if(growth>0){line([[1040-camera,303],[1075-camera,297],[1095-camera,310],[1140-camera,299],[1180-camera,306]],'#c36b68',2);vines(1060-camera,Math.max(1,Math.round(135*growth)));}
+    }
+    if(scene.monster){
+      ctx.globalAlpha=scene.monster;
+      if(sprites.shadow.complete&&sprites.shadow.naturalWidth)ctx.drawImage(sprites.shadow,Math.round(game.abductionX+105-camera),130,174,160);
+      else monster(game.abductionX+190-camera,290,1.75);
+      ctx.globalAlpha=1;
+    }
+    if(scene.riders===4)for(let index=3;index>=1;index--)cyclist(index,game.x+index*60-camera,300);
+    if(scene.emptyBikes)for(let index=1;index<4;index++)emptyBike(index,game.abductionX+index*60-camera,300,scene.bikeTilt);
+    if(state!=='blackout')cyclist(0,game.x-camera,game.y);
+    if(scene.flash){ctx.globalAlpha=scene.flash*(ui.gentle.checked?.36:1);rect(0,0,640,360,state==='vanish'?'#ffe4d5':'#f34550');ctx.globalAlpha=1;}
     if(state==='blackout')rect(0,0,640,360,'#05090f');
     if(state==='fall'){ctx.globalAlpha=Math.min(1,Math.max(0,(game.phaseTime-.7)/.7));rect(0,0,640,360,'#05090f');ctx.globalAlpha=1;}
   }
@@ -108,12 +167,13 @@ function syncUI() {
   ui.menu.classList.toggle('hidden',state!=='title');ui['pause-menu'].classList.toggle('hidden',!game.paused);ui['win-menu'].classList.toggle('hidden',state!=='win');
   ui.chapter.textContent=dark?'02 / THE SAME STREET. SOMETHING ELSE.':'01 / THE LAST GOOD EVENING';
   ui.counter.textContent=dark?`${game.echoes}/3 ECHOES · ${game.deaths} FALLS`:'FOUR FRIENDS · ONE ROAD';
-  const message=state==='thought'?'What happened? I have to save them!':state==='blackout'?'Somewhere beneath the same town…':state==='dead'?(game.echoes<3?'Your fall left an Echo. Try again.':'The Echoes remain. So do you.'):state==='dark'&&game.phaseTime<4&&game.checkpoint===1040?'Same street… Where is everyone?':'';
+  const message=game.openingVisuals().dialogue||(state==='blackout'?'Somewhere beneath the same town…':state==='dead'?(game.echoes<3?'Your fall left an Echo. Try again.':'The Echoes remain. So do you.'):state==='dark'&&game.phaseTime<4&&game.checkpoint===1040?'Same street… Where is everyone?':'');
   ui.dialogue.textContent=message;ui.dialogue.classList.toggle('hidden',!message);
   ui.objective.textContent=dark?'A / D  MOVE · SPACE  JUMP · R  LEAVE AN ECHO':state==='thought'?'FIND YOUR FRIENDS':state==='fall'?'A / D — STEER THROUGH THE FALL':'HOLD D / → TO RIDE TOGETHER';
   if(state==='dark'&&game.x>1410&&game.x<2100)ui.objective.textContent='THE GAP IS TOO WIDE. FALL OR PRESS R TO BUILD AN ECHO.';
+  if(['disturbance','reveal','vanish','upright','topple','thought','resolve'].includes(state))ui.objective.textContent='SOMETHING IS WRONG…';
   ui.result.textContent=`${game.deaths} falls. ${game.echoes} Echoes. Four friends together again.`;
-  if(lastState!==state){if(state==='reveal')tone(55,2,'sawtooth',.035);if(state==='vanish')tone(90,.7,'sawtooth');if(state==='dead')tone(110,.45,'triangle');if(state==='win'){tone(330,.6);setTimeout(()=>tone(440,.7),180);}lastState=state;}
+  if(lastState!==state){if(state==='disturbance')tone(55,1.6,'sawtooth',.025);if(state==='reveal')tone(65,2,'sawtooth',.035);if(state==='vanish')tone(90,.7,'sawtooth');if(state==='dead')tone(110,.45,'triangle');if(state==='win'){tone(330,.6);setTimeout(()=>tone(440,.7),180);}lastState=state;}
 }
 function start(){keys.clear();pressed.clear();audioBeat=0;game.start();canvas.focus();tone(330,.2);syncUI();}
 function pause(force){if(['title','win'].includes(game.state))return;game.paused=force??!game.paused;keys.clear();pressed.clear();syncUI();if(!game.paused)canvas.focus();}

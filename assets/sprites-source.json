@@ -1,0 +1,28 @@
+{
+  "riders": {
+    "source": "VIDEO-2026-11-14-13-13-42.mp4",
+    "frames": 48,
+    "fps": 8,
+    "cell": [
+      54,
+      72
+    ],
+    "rows": [
+      "striped protagonist",
+      "purple jacket",
+      "green hoodie",
+      "yellow jacket"
+    ],
+    "key": "per-frame sampled magenta; binary alpha",
+    "watermark": "excluded by fixed crop below y=380"
+  },
+  "shadow": {
+    "source": "Shadow_creature_sprite_facing_left_c14a21bb.jpg",
+    "size": [
+      174,
+      160
+    ],
+    "watermark": "excluded by crop outside creature bounds"
+  },
+  "empty_bikes": "Reconstructed pixel bicycles with matching frame colors; source riders occlude the original bicycle geometry."
+}
